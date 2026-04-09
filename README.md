@@ -25,6 +25,7 @@ The program opens the camera and shows a preview.
 When the picture looks okay, press `s`.
 Then draw a box around the object.
 After that, the tracker follows the object.
+It works better if the box is close to the object and not too big.
 
 ## Implementation Details
 

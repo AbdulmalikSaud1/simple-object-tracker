@@ -9,10 +9,15 @@ def open_camera():
     if hasattr(cv2, "CAP_AVFOUNDATION"):
         cam = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
         if cam.isOpened():
+            cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
             return cam
         cam.release()
 
-    return cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(0)
+    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    return cam
 
 
 def create_tracker():
@@ -38,7 +43,7 @@ def get_start_frame(cam):
     print("Press q to quit.")
 
     # Let the camera adjust first
-    for _ in range(20):
+    for _ in range(30):
         cam.read()
 
     while True:
@@ -83,7 +88,7 @@ def get_start_frame(cam):
 
 def select_object(frame):
     while True:
-        print("Draw a box, then press ENTER or SPACE.")
+        print("Draw a tight box around the object, then press ENTER or SPACE.")
 
         box = cv2.selectROI("Select Object", frame, fromCenter=False, showCrosshair=True)
         cv2.destroyWindow("Select Object")
@@ -92,6 +97,18 @@ def select_object(frame):
             return box
 
         print("Please try again.")
+
+
+def smooth_box(old_box, new_box):
+    x1, y1, w1, h1 = old_box
+    x2, y2, w2, h2 = new_box
+
+    x = int(0.7 * x1 + 0.3 * x2)
+    y = int(0.7 * y1 + 0.3 * y2)
+    w = int(0.7 * w1 + 0.3 * w2)
+    h = int(0.7 * h1 + 0.3 * h2)
+
+    return (x, y, w, h)
 
 
 def main():
@@ -125,6 +142,7 @@ def main():
 
     tracker.init(frame, box)
     print(f"{tracker_name} tracker started.")
+    last_box = tuple(int(value) for value in box)
 
     while True:
         ok, frame = cam.read()
@@ -139,7 +157,9 @@ def main():
         found, new_box = tracker.update(frame)
 
         if found:
-            x, y, w, h = [int(value) for value in new_box]
+            current_box = tuple(int(value) for value in new_box)
+            last_box = smooth_box(last_box, current_box)
+            x, y, w, h = last_box
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             cv2.putText(
                 frame,
